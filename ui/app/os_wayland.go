@@ -1119,7 +1119,7 @@ func waylandConnect() error {
 	}
 	C.gio_wl_registry_add_listener(reg)
 	// Get globals.
-	C.wl_display_roundtrip(c.disp)
+	C.wl_display_dispatch(c.disp)
 	// Get output configurations.
 	C.wl_display_roundtrip(c.disp)
 	if c.compositor == nil {
