@@ -111,9 +111,9 @@ func (o *Ops) Aux() []byte {
 	return aux[:o.auxLen]
 }
 
-func (d *Ops) write(op []byte, refs ...interface{}) {
-	d.data = append(d.data, op...)
-	d.refs = append(d.refs, refs...)
+func (o *Ops) write(op []byte, refs ...interface{}) {
+	o.data = append(o.data, op...)
+	o.refs = append(o.refs, refs...)
 }
 
 // Internal use only.
@@ -145,8 +145,8 @@ func (o *Ops) Write(op []byte, refs ...interface{}) {
 	o.write(op, refs...)
 }
 
-func (d *Ops) pc() pc {
-	return pc{data: len(d.data), refs: len(d.refs)}
+func (o *Ops) pc() pc {
+	return pc{data: len(o.data), refs: len(o.refs)}
 }
 
 // Record a macro of operations.
