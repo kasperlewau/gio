@@ -4,9 +4,7 @@
 
 package gl
 
-import (
-	"unsafe"
-)
+import "unsafe"
 
 /*
 #cgo linux LDFLAGS: -lGLESv2 -ldl
@@ -307,8 +305,8 @@ func (f *Functions) FramebufferTexture2D(target, attachment, texTarget Enum, t T
 	C.glFramebufferTexture2D(C.GLenum(target), C.GLenum(attachment), C.GLenum(texTarget), C.GLuint(t.V), C.GLint(level))
 }
 
-func (c *Functions) GetBinding(pname Enum) Object {
-	return Object{uint(c.GetInteger(pname))}
+func (f *Functions) GetBinding(pname Enum) Object {
+	return Object{uint(f.GetInteger(pname))}
 }
 
 func (f *Functions) GetError() Enum {
