@@ -9,6 +9,7 @@ package app
 
 #include <stdlib.h>
 #include <X11/Xlib.h>
+#include <X11/XKBlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 
@@ -22,6 +23,8 @@ GIO_FIELD_OFFSET(XButtonEvent, y);
 GIO_FIELD_OFFSET(XButtonEvent, state);
 GIO_FIELD_OFFSET(XButtonEvent, button);
 GIO_FIELD_OFFSET(XButtonEvent, time);
+GIO_FIELD_OFFSET(XKeyEvent, state);
+GIO_FIELD_OFFSET(XKeyEvent, keycode);
 GIO_FIELD_OFFSET(XMotionEvent, x);
 GIO_FIELD_OFFSET(XMotionEvent, y);
 GIO_FIELD_OFFSET(XMotionEvent, time);
@@ -35,6 +38,7 @@ import (
 	"unsafe"
 
 	"gioui.org/ui/f32"
+	"gioui.org/ui/key"
 	"gioui.org/ui/pointer"
 )
 
@@ -79,9 +83,22 @@ func (w *x11Window) loop() {
 		C.XNextEvent(w.x, (*C.XEvent)(unsafe.Pointer(&xev)))
 		switch xev.Type {
 		case C.KeyPress:
-			// TODO(dennwc): keyboard press
+			_, code := xev.GetKeyState(), xev.GetKeyKeycode()
+			sym := C.XkbKeycodeToKeysym(w.x, code, 0, 0)
+			chars := C.GoString(C.XKeysymToString(sym))
+
+			ev := key.EditEvent{
+				Text: chars,
+			}
+
+			// ev := key.Event{
+			// 	// Name:      utf.ReadFirstRune(chars),
+			// 	// Modifiers: key.Modifiers(state),
+			// }
+
+			w.w.event(ev)
+			w.draw()
 		case C.KeyRelease:
-			// TODO(dennwc): keyboard release
 		case C.ButtonPress, C.ButtonRelease:
 			ev := pointer.Event{
 				Type:   pointer.Press,
@@ -180,6 +197,10 @@ func (e *xEvent) getUlong(off int) C.ulong {
 	return *(*C.ulong)(unsafe.Pointer(uintptr(unsafe.Pointer(e)) + uintptr(off)))
 }
 
+func (e *xEvent) getUchar(off int) C.uchar {
+	return *(*C.uchar)(unsafe.Pointer(uintptr(unsafe.Pointer(e)) + uintptr(off)))
+}
+
 func (e *xEvent) getUlongMs(off int) time.Duration {
 	return time.Duration(e.getUlong(off)) * time.Millisecond
 }
@@ -219,6 +240,16 @@ func (e *xEvent) GetButtonTime() time.Duration {
 	return e.getUlongMs(int(C.gio_XButtonEvent_time_off))
 }
 
+// GetKeyState returns a Xevent.xkey.state field.
+func (e *xEvent) GetKeyState() C.uint {
+	return e.getUint(int(C.gio_XKeyEvent_state_off))
+}
+
+// GetKeyKeycode returns a Xevent.xkey.keycode field.
+func (e *xEvent) GetKeyKeycode() C.uchar {
+	return e.getUchar(int(C.gio_XKeyEvent_keycode_off))
+}
+
 // GetMotionX returns a XEvent.xmotion.x field.
 func (e *xEvent) GetMotionX() C.int {
 	return e.getInt(int(C.gio_XMotionEvent_x_off))
@@ -240,9 +271,7 @@ func (e *xEvent) GetClientDataLong() [5]C.long {
 	return *ptr
 }
 
-var (
-	x11Threads sync.Once
-)
+var x11Threads sync.Once
 
 func createWindowX11(w *Window, opts *windowOptions) error {
 	var err error
